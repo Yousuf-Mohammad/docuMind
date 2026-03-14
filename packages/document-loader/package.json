@@ -1,0 +1,23 @@
+{
+  "name": "@documind/document-loader",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@langchain/community": "^1.1.23",
+    "langchain": "^0.3.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "@documind/shared": "*",
+    "typescript": "^5.6.0"
+  },
+  "peerDependencies": {
+    "@documind/shared": "*"
+  }
+}

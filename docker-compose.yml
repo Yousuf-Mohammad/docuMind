@@ -1,0 +1,20 @@
+# DocuMind AI – Docker Compose
+# Vector store is Convex (hosted); use this file only if you run the API in Docker.
+# Set CONVEX_URL and GROQ_API_KEY in .env.
+
+services:
+  # Optional: run the API inside Docker. Uncomment when needed.
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/api/Dockerfile
+  #   container_name: documind-api
+  #   ports:
+  #     - "3001:3001"
+  #   env_file: .env
+  #   environment:
+  #     CONVEX_URL: ${CONVEX_URL}
+  #     GROQ_API_KEY: ${GROQ_API_KEY}
+  #   restart: unless-stopped
+  #   profiles:
+  #     - app

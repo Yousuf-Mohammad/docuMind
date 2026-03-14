@@ -1,0 +1,31 @@
+{
+  "name": "@documind/rag-core",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.0",
+    "@langchain/textsplitters": "^0.1.0",
+    "@documind/llm": "*",
+    "langchain": "^0.3.0"
+  },
+  "devDependencies": {
+    "@documind/shared": "*",
+    "@documind/embeddings": "*",
+    "@documind/document-loader": "*",
+    "@documind/vector-store": "*",
+    "typescript": "^5.6.0"
+  },
+  "peerDependencies": {
+    "@documind/shared": "*",
+    "@documind/embeddings": "*",
+    "@documind/document-loader": "*",
+    "@documind/vector-store": "*",
+    "@documind/llm": "*"
+  }
+}

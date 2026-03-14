@@ -1,0 +1,36 @@
+{
+  "name": "documind-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Full-stack RAG application for PDF document Q&A",
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:api": "npm run dev -w apps/api",
+    "build": "npm run build --workspaces --if-present",
+    "build:web": "npm run build -w apps/web",
+    "build:api": "npm run build -w apps/api",
+    "lint": "npm run lint --workspaces --if-present",
+    "clean": "node -e \"require('fs').rmSync('node_modules',{recursive:true,force:true}); ['apps/web','apps/api','packages/rag-core','packages/vector-store','packages/document-loader','packages/embeddings'].forEach(p=>{try{require('fs').rmSync(p+'/node_modules',{recursive:true,force:true});}catch(e){}})\""
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "shared"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "rag",
+    "llm",
+    "documents",
+    "pdf",
+    "chromadb",
+    "langchain"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  }
+}
