@@ -1,114 +1,291 @@
 # DocuMind AI
 
-Full-stack **Retrieval Augmented Generation (RAG)** application to upload PDFs and ask questions about their content.
+A full-stack **Retrieval-Augmented Generation (RAG)** application. Upload a PDF, then ask
+questions about its contents and get grounded answers with citations back to the source text.
 
-## Tech Stack
+DocuMind keeps the language model honest: instead of answering from memory, it retrieves the
+most relevant passages from *your* documents and asks the LLM to answer using only that context.
+
+## Contents
+
+- [How it works](#how-it-works)
+- [Tech stack](#tech-stack)
+- [Repository structure](#repository-structure)
+- [Prerequisites](#prerequisites)
+- [Setup](#setup)
+- [Using the app](#using-the-app)
+- [API reference](#api-reference)
+- [Configuration](#configuration)
+- [Architecture](#architecture)
+- [Scripts](#scripts)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+
+## How it works
+
+DocuMind runs two pipelines: **ingestion** (when you upload a document) and **query** (when you
+ask a question).
+
+### 1. Ingestion — turning a PDF into searchable knowledge
+
+```
+PDF upload ──▶ extract text ──▶ split into chunks ──▶ embed each chunk ──▶ store vectors
+              (LangChain PDF     (RecursiveCharacter   (Ollama:            (Convex vector
+               loader)            TextSplitter,         nomic-embed-text,   index, tagged
+                                  ~1000 chars /         768-dim vectors)    with docId)
+                                  200 overlap)
+```
+
+Each uploaded PDF is assigned a `docId`, its text is split into overlapping ~1,000-character
+chunks, and every chunk is converted into a 768-dimensional embedding vector. Chunks and vectors
+are stored in Convex, tagged with their `docId` and source filename so answers can be traced and
+filtered back to specific documents.
+
+### 2. Query — answering a question
+
+```
+question ──▶ embed question ──▶ vector similarity search ──▶ build context ──▶ LLM answer
+             (same embedder)     (top-K chunks from Convex,   (concatenate      (Groq
+                                  optionally filtered by        retrieved         llama-3.1-8b-
+                                  docIds)                       chunks)           instant)
+                                                                                     │
+                                                                                     ▼
+                                                                          { answer, sources }
+```
+
+Your question is embedded with the same model used for ingestion, the vector store returns the
+top-K most similar chunks (default 4), and those chunks become the context handed to the Groq LLM.
+The model is prompted to answer **only** from the provided context and to say so when the context
+is insufficient — this is what prevents hallucination. The response includes both the answer and
+the source chunks it was built from.
+
+## Tech stack
 
 | Layer | Technologies |
 | --- | --- |
 | Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS, shadcn-style UI |
 | Backend | Node.js, Express, TypeScript |
-| AI | LangChain, Groq (LLM), Ollama (embeddings), Convex (vector store) |
+| RAG / AI | LangChain, Groq (`llama-3.1-8b-instant` LLM), Ollama (`nomic-embed-text` embeddings) |
+| Vector store | Convex (hosted vector index; abstracted for swap to Pinecone, Weaviate, etc.) |
+| Tooling | npm workspaces monorepo |
 
-## Repository Structure
+## Repository structure
 
 ```text
 documind-ai/
-+-- apps/
-|   +-- web/               # Next.js frontend
-|   +-- api/               # Express API
-+-- packages/
-|   +-- rag-core/          # RAG orchestration (retrieve + generate)
-|   +-- vector-store/      # Convex vector store (abstracted for swap to Pinecone, etc.)
-|   +-- document-loader/   # PDF loading (LangChain)
-|   +-- embeddings/        # Embeddings (Ollama/nomic-embed-text default)
-+-- shared/                # Types, utils, env-based config
-|   +-- types/
-|   +-- utils/
-|   +-- config/
-+-- docs/
-+-- .env.example
-+-- README.md
+├── apps/
+│   ├── web/                # Next.js frontend (upload UI + chat)
+│   └── api/                # Express API (routes, controllers, services)
+├── packages/
+│   ├── rag-core/           # RAG orchestration: chunk, ingest, retrieve, generate
+│   ├── vector-store/       # Convex vector store + Convex functions (swappable backend)
+│   ├── document-loader/    # PDF text extraction (LangChain)
+│   ├── embeddings/         # Ollama embeddings (nomic-embed-text, 768-dim)
+│   └── llm/                # Groq chat LLM service
+├── shared/                 # Shared types, utils, and env-based config
+├── docs/                   # Setup, deployment, and architecture guides
+├── docker-compose.yml      # Optional: run the API in Docker
+├── .env.example
+└── README.md
 ```
+
+The `apps/` are the runnable programs; the `packages/` are the reusable building blocks they
+compose. Business logic lives in the packages and in `apps/api/src/services/` — the HTTP routes
+are thin boundaries only.
 
 ## Prerequisites
 
-- **Node.js** >= 20
-- **Convex** for vector storage  
-  Run `npx convex dev` from `packages/vector-store` to link and deploy, then set `CONVEX_URL` in `.env`.
-- **Groq API key** for the LLM (`GROQ_API_KEY`)
-- **Ollama** (optional) for local embeddings (for example, `nomic-embed-text`)  
-  You can also configure another embedding provider.
+- **Node.js** ≥ 20
+- **Groq API key** — powers the LLM that generates answers. Set as `GROQ_API_KEY`.
+  Get one at [console.groq.com](https://console.groq.com).
+- **Convex** — the hosted vector store. Run `npx convex dev` from `packages/vector-store` to link
+  and deploy your deployment, then set its **deployment URL** (e.g. `https://xxx.convex.cloud`) as
+  `CONVEX_URL`.
+- **Ollama** — runs the embedding model locally, no API key required.
+  Install [Ollama](https://ollama.com), then pull the model:
 
-Full setup and deployment guide: [docs/SETUP_AND_DEPLOY.md](docs/SETUP_AND_DEPLOY.md)
+  ```bash
+  ollama pull nomic-embed-text
+  ```
+
+  Ensure it is serving (`ollama serve`) at `http://localhost:11434`, or point `OLLAMA_BASE_URL`
+  elsewhere.
+
+> Full setup and deployment walkthrough: [docs/SETUP_AND_DEPLOY.md](docs/SETUP_AND_DEPLOY.md) ·
+> Ollama specifics: [docs/OLLAMA_SETUP.md](docs/OLLAMA_SETUP.md)
 
 ## Setup
 
-1. **Clone and install**
+1. **Clone and install** (installs all workspaces):
 
    ```bash
    cd documind-ai
    npm install
    ```
 
-2. **Environment**
+2. **Configure environment:**
 
    ```bash
    cp .env.example .env
-   # Edit .env: set GROQ_API_KEY, CONVEX_URL, and optional OLLAMA_BASE_URL
+   # Edit .env and set at least GROQ_API_KEY and CONVEX_URL.
    ```
 
-3. **Build packages**  
-   Needed for API and web to resolve workspace dependencies.
+3. **Deploy the Convex vector store** (creates the `documents` table and vector index):
 
    ```bash
-   npm run build -w shared
+   npx convex dev        # run from packages/vector-store; copy the deployment URL into CONVEX_URL
+   ```
+
+4. **Build the workspace packages** (the API and web apps depend on their compiled output — build
+   in dependency order):
+
+   ```bash
+   npm run build -w @documind/shared
    npm run build -w @documind/embeddings
    npm run build -w @documind/document-loader
+   npm run build -w @documind/llm
    npm run build -w @documind/vector-store
    npm run build -w @documind/rag-core
    ```
 
-4. **Run**
-
-   - API: `npm run dev:api` -> `http://localhost:3001`
-   - Web: `npm run dev:web` -> `http://localhost:3000`
-
-   Or from root:
+5. **Run the app:**
 
    ```bash
-   npm run dev
+   npm run dev           # starts every workspace that defines a dev script
    ```
 
-## API Endpoints
+   Or start each side individually:
 
-- `POST /upload`  
-  Upload a PDF (multipart/form-data, field `file`).  
-  Returns: `{ success, data: { docId, filename, chunkCount } }`
-- `POST /ask`  
-  Send a question (JSON body: `{ question, docIds?, topK? }`).  
-  Returns: `{ success, data: { answer, sources } }`
-- `GET /health`  
-  Health check.
+   - API: `npm run dev:api` → <http://localhost:3001>
+   - Web: `npm run dev:web` → <http://localhost:3000>
+
+   Make sure Ollama is running before uploading, so embeddings can be generated.
+
+## Using the app
+
+1. Open <http://localhost:3000>.
+2. **Upload a PDF** using the uploader. The file is sent to the API, chunked, embedded, and stored;
+   you'll get back a `docId` and the number of chunks created.
+3. **Ask a question** in the chat. DocuMind retrieves the most relevant chunks, generates an
+   answer grounded in them, and displays the source passages the answer was drawn from.
+4. If the documents don't contain the answer, the model will tell you rather than inventing one.
+
+Prefer the terminal? The same flow works directly against the [API](#api-reference).
+
+## API reference
+
+Base URL: `http://localhost:3001`
+
+### `POST /upload`
+
+Upload a PDF for ingestion.
+
+- **Body:** `multipart/form-data` with field `file` (PDF only, max 20 MB).
+- **Response `201`:**
+
+  ```json
+  {
+    "success": true,
+    "data": { "docId": "abc123", "filename": "report.pdf", "chunkCount": 42 }
+  }
+  ```
+
+Example:
+
+```bash
+curl -F "file=@report.pdf" http://localhost:3001/upload
+```
+
+### `POST /ask`
+
+Ask a question over your ingested documents.
+
+- **Body:** `application/json`
+
+  | Field | Type | Required | Description |
+  | --- | --- | --- | --- |
+  | `question` | string (1–2000 chars) | yes | The question to answer. |
+  | `docIds` | string[] | no | Restrict retrieval to these documents. Omit to search all. |
+  | `topK` | integer (1–20) | no | Number of chunks to retrieve. Default `4`. |
+
+- **Response `200`:**
+
+  ```json
+  {
+    "success": true,
+    "data": {
+      "answer": "…",
+      "sources": [{ "content": "…", "metadata": { "docId": "abc123", "source": "report.pdf" } }]
+    }
+  }
+  ```
+
+Example:
+
+```bash
+curl -X POST http://localhost:3001/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What was Q3 revenue?", "topK": 4}'
+```
+
+### `GET /health`
+
+Liveness check. Returns `{ "status": "ok", "service": "documind-api" }`.
+
+> **Rate limits:** 100 requests / 15 min per IP on general endpoints, and 20 uploads / 15 min.
+> Errors return a consistent `{ "success": false, "error": { code, message, statusCode } }` shape.
+
+## Configuration
+
+Set these in `.env` (see [`.env.example`](.env.example) for the annotated version):
+
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `GROQ_API_KEY` | ✅ | — | Groq API key for the answer-generating LLM. |
+| `CONVEX_URL` | ✅ | — | Convex **deployment** URL (`https://xxx.convex.cloud`), not the dashboard URL. |
+| `OLLAMA_BASE_URL` | | `http://localhost:11434` | Where the Ollama embedding server is reachable. |
+| `API_PORT` | | `3001` | Port for the Express API. |
+| `NODE_ENV` | | `development` | Node environment. |
+| `NEXT_PUBLIC_API_URL` | | `http://localhost:3001` | API base URL the web app calls. |
+| `CORS_ORIGINS` | | `http://localhost:3000` | Comma-separated origins the API accepts (add your LAN URL if needed). |
 
 ## Architecture
 
-- Monorepo using npm workspaces
-- Business logic lives in `apps/api/src/services/` and `packages/*`
-- API routes handle HTTP boundaries only
-- Environment-based config via `@documind/shared/config`
+- **Monorepo** using npm workspaces (`apps/*`, `packages/*`, `shared`).
+- **Separation of concerns:** RAG logic lives entirely in `packages/rag-core`; the API's
+  `services/` wire concrete implementations (Ollama embeddings, Convex store, Groq LLM) into the
+  core, and routes handle only HTTP.
+- **Swappable vector store:** `VectorStoreService` wraps a `ConvexVectorStore` behind an
+  `IVectorStore` interface, so the backend can be replaced (Pinecone, Weaviate, …) without
+  touching the RAG pipeline.
+- **Environment-based config** is centralized via `@documind/shared/config`.
 
-More details: [docs/architecture.md](docs/architecture.md)
+More detail: [docs/architecture.md](docs/architecture.md).
 
-## Scripts (from root)
+## Scripts
+
+Run from the repository root:
 
 | Script | Description |
 | --- | --- |
 | `npm run dev` | Run all workspaces that define a `dev` script |
-| `npm run dev:web` | Start Next.js dev server |
-| `npm run dev:api` | Start Express API (tsx watch) |
+| `npm run dev:web` | Start the Next.js dev server |
+| `npm run dev:api` | Start the Express API (tsx watch) |
 | `npm run build` | Build all workspaces |
+| `npm run build:web` / `build:api` | Build a single app |
 | `npm run lint` | Lint all workspaces |
+| `npm run clean` | Remove all `node_modules` |
+
+## Troubleshooting
+
+- **Upload fails with "fetch failed":** ensure Ollama is running (`ollama serve`) and the model is
+  pulled (`ollama pull nomic-embed-text`), and that `CONVEX_URL` is a deployment URL.
+- **Convex 502 / Bad Gateway:** redeploy from `packages/vector-store` with `npx convex deploy`;
+  check the Convex dashboard or [status.convex.dev](https://status.convex.dev).
+- **`LLM_RATE_LIMIT` (429):** you've hit Groq's rate limit — retry shortly.
+- **`LLM_CONFIG` (503):** `GROQ_API_KEY` is missing or invalid.
+- **Empty or off-topic answers:** the relevant text may not have been retrieved — try a more
+  specific question or increase `topK`.
 
 ## License
 
