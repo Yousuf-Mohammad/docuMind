@@ -39,4 +39,4 @@ Vector store abstraction for DocuMind. **Default backend: Convex.** The package 
 - `convex/` – Convex backend: schema, `insertDocument` (single + batch), `vectorSearch` (vector similarity action).
 - `src/` – `ConvexVectorStore` (implements `IVectorStore`), `VectorStoreService` (default Convex), types.
 
-Embedding dimensions are fixed at **768** (nomic-embed-text). If you change the embedding model, update `EMBEDDING_DIMENSIONS` in `convex/schema.ts`.
+Embedding dimensions are fixed at **384** (all-MiniLM-L6-v2). If you change the embedding model, update `EMBEDDING_DIMENSIONS` in `convex/schema.ts` and redeploy (`npx convex deploy`).

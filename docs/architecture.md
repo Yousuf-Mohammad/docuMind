@@ -8,7 +8,7 @@ DocuMind AI is a full-stack RAG (Retrieval Augmented Generation) application. Us
 
 1. **Document ingestion** – PDF uploaded → load and parse → extract text.
 2. **Chunking** – Text split into overlapping chunks (RecursiveCharacterTextSplitter).
-3. **Embedding generation** – Each chunk is embedded (e.g. Ollama nomic-embed-text).
+3. **Embedding generation** – Each chunk is embedded in-process (Transformers.js all-MiniLM-L6-v2, 384-dim).
 4. **Vector storage** – Embeddings and metadata stored in Convex.
 5. **Retrieval** – User question is embedded; Convex vector similarity search returns top-K chunks.
 6. **Answer generation** – Chunks + question sent to LLM (e.g. Groq); answer and sources returned.
@@ -34,9 +34,9 @@ DocuMind AI is a full-stack RAG (Retrieval Augmented Generation) application. Us
 
 ## Embedding Generation
 
-- **Location**: `packages/embeddings` – e.g. `LocalEmbeddingService` (Ollama / nomic-embed-text).
+- **Location**: `packages/embeddings` – `LocalEmbeddingService` (Transformers.js / all-MiniLM-L6-v2, in-process).
 - **API**: LangChain embeddings interface; batch embedding for chunks.
-- **Config**: `OLLAMA_BASE_URL` (optional); model default nomic-embed-text.
+- **Config**: none required; model default `Xenova/all-MiniLM-L6-v2` (384-dim), downloaded to a local cache on first use.
 - **Abstraction**: Embedding service can be swapped for other providers without changing callers.
 
 ## Vector Search
@@ -77,5 +77,5 @@ DocuMind AI is a full-stack RAG (Retrieval Augmented Generation) application. Us
 - **packages/rag-core** – RAG pipeline (ingestion, chunking, retrieval, generation).
 - **packages/vector-store** – Vector store abstraction (Convex default).
 - **packages/document-loader** – PDF load, extract, normalize.
-- **packages/embeddings** – Embedding service (e.g. Ollama / nomic-embed-text).
+- **packages/embeddings** – Embedding service (Transformers.js / all-MiniLM-L6-v2, in-process).
 - **shared** – Types, utils, config.

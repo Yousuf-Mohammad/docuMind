@@ -30,14 +30,14 @@ ask a question).
 
 ```
 PDF upload ──▶ extract text ──▶ split into chunks ──▶ embed each chunk ──▶ store vectors
-              (LangChain PDF     (RecursiveCharacter   (Ollama:            (Convex vector
-               loader)            TextSplitter,         nomic-embed-text,   index, tagged
-                                  ~1000 chars /         768-dim vectors)    with docId)
+              (LangChain PDF     (RecursiveCharacter   (Transformers.js:   (Convex vector
+               loader)            TextSplitter,         all-MiniLM-L6-v2,   index, tagged
+                                  ~1000 chars /         384-dim vectors)    with docId)
                                   200 overlap)
 ```
 
 Each uploaded PDF is assigned a `docId`, its text is split into overlapping ~1,000-character
-chunks, and every chunk is converted into a 768-dimensional embedding vector. Chunks and vectors
+chunks, and every chunk is converted into a 384-dimensional embedding vector. Chunks and vectors
 are stored in Convex, tagged with their `docId` and source filename so answers can be traced and
 filtered back to specific documents.
 
@@ -65,7 +65,7 @@ the source chunks it was built from.
 | --- | --- |
 | Frontend | Next.js 15 (App Router), TypeScript, Tailwind CSS, shadcn-style UI |
 | Backend | Node.js, Express, TypeScript |
-| RAG / AI | LangChain, Groq (`llama-3.1-8b-instant` LLM), Ollama (`nomic-embed-text` embeddings) |
+| RAG / AI | LangChain, Groq (`llama-3.1-8b-instant` LLM), Transformers.js (`all-MiniLM-L6-v2` in-process embeddings) |
 | Vector store | Convex (hosted vector index; abstracted for swap to Pinecone, Weaviate, etc.) |
 | Tooling | npm workspaces monorepo |
 
@@ -80,7 +80,7 @@ documind-ai/
 │   ├── rag-core/           # RAG orchestration: chunk, ingest, retrieve, generate
 │   ├── vector-store/       # Convex vector store + Convex functions (swappable backend)
 │   ├── document-loader/    # PDF text extraction (LangChain)
-│   ├── embeddings/         # Ollama embeddings (nomic-embed-text, 768-dim)
+│   ├── embeddings/         # Transformers.js embeddings (all-MiniLM-L6-v2, 384-dim, in-process)
 │   └── llm/                # Groq chat LLM service
 ├── shared/                 # Shared types, utils, and env-based config
 ├── docs/                   # Setup, deployment, and architecture guides
@@ -101,18 +101,10 @@ are thin boundaries only.
 - **Convex** — the hosted vector store. Run `npx convex dev` from `packages/vector-store` to link
   and deploy your deployment, then set its **deployment URL** (e.g. `https://xxx.convex.cloud`) as
   `CONVEX_URL`.
-- **Ollama** — runs the embedding model locally, no API key required.
-  Install [Ollama](https://ollama.com), then pull the model:
+- **Embeddings** — generated **in-process** by Transformers.js (`all-MiniLM-L6-v2`). No API key,
+  no server, no setup. The model (~90 MB) is downloaded to a local cache on first upload.
 
-  ```bash
-  ollama pull nomic-embed-text
-  ```
-
-  Ensure it is serving (`ollama serve`) at `http://localhost:11434`, or point `OLLAMA_BASE_URL`
-  elsewhere.
-
-> Full setup and deployment walkthrough: [docs/SETUP_AND_DEPLOY.md](docs/SETUP_AND_DEPLOY.md) ·
-> Ollama specifics: [docs/OLLAMA_SETUP.md](docs/OLLAMA_SETUP.md)
+> Full setup and deployment walkthrough: [docs/SETUP_AND_DEPLOY.md](docs/SETUP_AND_DEPLOY.md)
 
 ## Setup
 
@@ -159,7 +151,8 @@ are thin boundaries only.
    - API: `npm run dev:api` → <http://localhost:3001>
    - Web: `npm run dev:web` → <http://localhost:3000>
 
-   Make sure Ollama is running before uploading, so embeddings can be generated.
+   The first upload downloads the embedding model (~90 MB) to a local cache, so it may take a
+   little longer; subsequent uploads are fast.
 
 ## Using the app
 
@@ -243,7 +236,6 @@ Set these in `.env` (see [`.env.example`](.env.example) for the annotated versio
 | --- | --- | --- | --- |
 | `GROQ_API_KEY` | ✅ | — | Groq API key for the answer-generating LLM. |
 | `CONVEX_URL` | ✅ | — | Convex **deployment** URL (`https://xxx.convex.cloud`), not the dashboard URL. |
-| `OLLAMA_BASE_URL` | | `http://localhost:11434` | Where the Ollama embedding server is reachable. |
 | `API_PORT` | | `3001` | Port for the Express API. |
 | `NODE_ENV` | | `development` | Node environment. |
 | `NEXT_PUBLIC_API_URL` | | `http://localhost:3001` | API base URL the web app calls. |
@@ -253,7 +245,7 @@ Set these in `.env` (see [`.env.example`](.env.example) for the annotated versio
 
 - **Monorepo** using npm workspaces (`apps/*`, `packages/*`, `shared`).
 - **Separation of concerns:** RAG logic lives entirely in `packages/rag-core`; the API's
-  `services/` wire concrete implementations (Ollama embeddings, Convex store, Groq LLM) into the
+  `services/` wire concrete implementations (Transformers.js embeddings, Convex store, Groq LLM) into the
   core, and routes handle only HTTP.
 - **Swappable vector store:** `VectorStoreService` wraps a `ConvexVectorStore` behind an
   `IVectorStore` interface, so the backend can be replaced (Pinecone, Weaviate, …) without
@@ -278,8 +270,8 @@ Run from the repository root:
 
 ## Troubleshooting
 
-- **Upload fails with "fetch failed":** ensure Ollama is running (`ollama serve`) and the model is
-  pulled (`ollama pull nomic-embed-text`), and that `CONVEX_URL` is a deployment URL.
+- **Upload fails with "fetch failed":** ensure `CONVEX_URL` is a deployment URL
+  (`https://xxx.convex.cloud`) and that the Convex deployment is reachable.
 - **Convex 502 / Bad Gateway:** redeploy from `packages/vector-store` with `npx convex deploy`;
   check the Convex dashboard or [status.convex.dev](https://status.convex.dev).
 - **`LLM_RATE_LIMIT` (429):** you've hit Groq's rate limit — retry shortly.
