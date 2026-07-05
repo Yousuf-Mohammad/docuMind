@@ -3,9 +3,9 @@ import { v } from "convex/values";
 
 /**
  * Embedding dimensions must match the embedding model.
- * nomic-embed-text (Ollama) produces 768-dimensional vectors.
+ * all-MiniLM-L6-v2 (Transformers.js, in-process) produces 384-dimensional vectors.
  */
-export const EMBEDDING_DIMENSIONS = 768;
+export const EMBEDDING_DIMENSIONS = 384;
 
 export default defineSchema({
   documents: defineTable({

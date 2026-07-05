@@ -6,7 +6,7 @@ export { LocalEmbeddingService } from './LocalEmbeddingService.js';
 export type { LocalEmbeddingServiceOptions } from './LocalEmbeddingService.js';
 
 /**
- * Create default local embeddings (Ollama nomic-embed-text) for the RAG pipeline.
+ * Create default local embeddings (Transformers.js all-MiniLM-L6-v2, in-process) for the RAG pipeline.
  */
 export function createEmbeddings(options: LocalEmbeddingServiceOptions = {}): EmbeddingsInterface {
   const service = new LocalEmbeddingService(options);

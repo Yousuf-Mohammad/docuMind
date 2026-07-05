@@ -29,9 +29,8 @@ export async function ingestDocument(buffer: Buffer, filename: string): Promise<
     if (message === 'fetch failed' || message?.includes('fetch failed')) {
       throw new AppError(
         'UPLOAD_FAILED',
-        'Upload failed: check that CONVEX_URL is your deployment URL (e.g. https://xxx.convex.cloud) and that Ollama is running (embeddings) at ' +
-          (process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434') +
-          '. Original error: ' + (message || 'connection failed'),
+        'Upload failed: check that CONVEX_URL is your deployment URL (e.g. https://xxx.convex.cloud) and that the Convex deployment is reachable. ' +
+          'Original error: ' + (message || 'connection failed'),
         503
       );
     }
@@ -49,7 +48,7 @@ export async function ingestDocument(buffer: Buffer, filename: string): Promise<
     if (!message || message === '') {
       throw new AppError(
         'UPLOAD_FAILED',
-        'Upload failed. Check that Ollama is running (ollama serve, ollama pull nomic-embed-text) and Convex is deployed (npx convex deploy from packages/vector-store). Check API server logs for details.',
+        'Upload failed. Check that Convex is deployed (npx convex deploy from packages/vector-store). Check API server logs for details.',
         503
       );
     }

@@ -1,27 +1,25 @@
-import { OllamaEmbeddings } from '@langchain/ollama';
+import { HuggingFaceTransformersEmbeddings } from '@langchain/community/embeddings/huggingface_transformers';
 import type { EmbeddingVector } from '@documind/shared/types';
 
 export interface LocalEmbeddingServiceOptions {
-  /** Ollama base URL (default http://localhost:11434) */
-  baseUrl?: string;
-  /** Model name (default nomic-embed-text) */
+  /** Transformers.js model name (default Xenova/all-MiniLM-L6-v2, 384-dim) */
   model?: string;
   /** Max texts per batch for createBatchEmbeddings (default 50) */
   batchSize?: number;
 }
 
 /**
- * Local embedding service using Ollama with nomic-embed-text.
- * No API key required; runs on your machine.
+ * Local embedding service using Transformers.js (all-MiniLM-L6-v2).
+ * Runs in-process — no API key, no external server (no Ollama required).
+ * The model (~90 MB) is downloaded to a local cache on first use.
  */
 export class LocalEmbeddingService {
-  private embeddings: OllamaEmbeddings;
+  private embeddings: HuggingFaceTransformersEmbeddings;
   private batchSize: number;
 
   constructor(options: LocalEmbeddingServiceOptions = {}) {
-    this.embeddings = new OllamaEmbeddings({
-      baseUrl: options.baseUrl ?? process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434',
-      model: options.model ?? 'nomic-embed-text',
+    this.embeddings = new HuggingFaceTransformersEmbeddings({
+      model: options.model ?? 'Xenova/all-MiniLM-L6-v2',
     });
     this.batchSize = options.batchSize ?? 50;
   }
@@ -45,7 +43,7 @@ export class LocalEmbeddingService {
   }
 
   /** Expose LangChain embeddings for vector stores. */
-  getLangChainEmbeddings(): OllamaEmbeddings {
+  getLangChainEmbeddings(): HuggingFaceTransformersEmbeddings {
     return this.embeddings;
   }
 }
