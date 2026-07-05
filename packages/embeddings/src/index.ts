@@ -4,6 +4,8 @@ import type { LocalEmbeddingServiceOptions } from './LocalEmbeddingService.js';
 
 export { LocalEmbeddingService } from './LocalEmbeddingService.js';
 export type { LocalEmbeddingServiceOptions } from './LocalEmbeddingService.js';
+export { TransformersEmbeddings } from './TransformersEmbeddings.js';
+export type { TransformersEmbeddingsParams } from './TransformersEmbeddings.js';
 
 /**
  * Create default local embeddings (Transformers.js all-MiniLM-L6-v2, in-process) for the RAG pipeline.

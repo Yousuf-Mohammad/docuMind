@@ -1,4 +1,4 @@
-import { HuggingFaceTransformersEmbeddings } from '@langchain/community/embeddings/huggingface_transformers';
+import { TransformersEmbeddings } from './TransformersEmbeddings.js';
 import type { EmbeddingVector } from '@documind/shared/types';
 
 export interface LocalEmbeddingServiceOptions {
@@ -14,11 +14,11 @@ export interface LocalEmbeddingServiceOptions {
  * The model (~90 MB) is downloaded to a local cache on first use.
  */
 export class LocalEmbeddingService {
-  private embeddings: HuggingFaceTransformersEmbeddings;
+  private embeddings: TransformersEmbeddings;
   private batchSize: number;
 
   constructor(options: LocalEmbeddingServiceOptions = {}) {
-    this.embeddings = new HuggingFaceTransformersEmbeddings({
+    this.embeddings = new TransformersEmbeddings({
       model: options.model ?? 'Xenova/all-MiniLM-L6-v2',
     });
     this.batchSize = options.batchSize ?? 50;
@@ -43,7 +43,7 @@ export class LocalEmbeddingService {
   }
 
   /** Expose LangChain embeddings for vector stores. */
-  getLangChainEmbeddings(): HuggingFaceTransformersEmbeddings {
+  getLangChainEmbeddings(): TransformersEmbeddings {
     return this.embeddings;
   }
 }
