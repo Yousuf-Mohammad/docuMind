@@ -1,4 +1,4 @@
-# DocuMind AI
+# DocuMind
 
 A full-stack **Retrieval-Augmented Generation (RAG)** application. Upload a PDF, then ask
 questions about its contents and get grounded answers with citations back to the source text.
@@ -8,18 +8,25 @@ most relevant passages from *your* documents and asks the LLM to answer using on
 
 ## Contents
 
-- [How it works](#how-it-works)
-- [Tech stack](#tech-stack)
-- [Repository structure](#repository-structure)
-- [Prerequisites](#prerequisites)
-- [Setup](#setup)
-- [Using the app](#using-the-app)
-- [API reference](#api-reference)
-- [Configuration](#configuration)
-- [Architecture](#architecture)
-- [Scripts](#scripts)
-- [Troubleshooting](#troubleshooting)
-- [License](#license)
+- [DocuMind](#documind)
+  - [Contents](#contents)
+  - [How it works](#how-it-works)
+    - [1. Ingestion — turning a PDF into searchable knowledge](#1-ingestion--turning-a-pdf-into-searchable-knowledge)
+    - [2. Query — answering a question](#2-query--answering-a-question)
+  - [Tech stack](#tech-stack)
+  - [Repository structure](#repository-structure)
+  - [Prerequisites](#prerequisites)
+  - [Setup](#setup)
+  - [Using the app](#using-the-app)
+  - [API reference](#api-reference)
+    - [`POST /upload`](#post-upload)
+    - [`POST /ask`](#post-ask)
+    - [`GET /health`](#get-health)
+  - [Configuration](#configuration)
+  - [Architecture](#architecture)
+  - [Scripts](#scripts)
+  - [Troubleshooting](#troubleshooting)
+  - [License](#license)
 
 ## How it works
 
