@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@langchain/core": "^0.3.0",
-    "convex": "^1.17.0"
+    "convex": "^1.42.1"
   },
   "devDependencies": {
     "@documind/embeddings": "*",

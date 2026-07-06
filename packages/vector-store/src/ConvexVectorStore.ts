@@ -9,6 +9,43 @@ export interface ConvexVectorStoreConfig {
   convexUrl?: string;
 }
 
+/** Transient Convex gateway/network errors worth retrying (not schema/logic errors). */
+function isTransientConvexError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return (
+    msg.includes('502') ||
+    msg.includes('bad gateway') ||
+    msg.includes('<!doctype html') ||
+    msg.includes('fetch failed') ||
+    msg.includes('503') ||
+    msg.includes('econnreset') ||
+    msg.includes('etimedout')
+  );
+}
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Run an operation, retrying transient Convex gateway errors with exponential backoff.
+ * Non-transient errors (e.g. dimension mismatch) throw immediately.
+ */
+async function withRetry<T>(op: () => Promise<T>, attempts = 6): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await op();
+    } catch (err) {
+      lastErr = err;
+      if (i === attempts - 1 || !isTransientConvexError(err)) throw err;
+      await sleep(Math.min(500 * 2 ** i, 4000)); // 500ms,1s,2s,4s,4s -> ~11.5s total
+    }
+  }
+  throw lastErr;
+}
+
+/** Max documents per Convex mutation. Large PDFs are inserted in several smaller transactions. */
+const INSERT_BATCH_SIZE = 64;
+
 /** Lazy-load Convex generated API (requires `npx convex codegen` from packages/vector-store). */
 function getConvexApi(): {
   insertDocument: { batchInsertDocuments: unknown };
@@ -53,10 +90,16 @@ export class ConvexVectorStore implements IVectorStore {
       source: (doc.metadata?.source as string) ?? '',
       docId: doc.metadata?.docId as string | undefined,
     }));
-    await this.client.mutation(
-      api.insertDocument.batchInsertDocuments as Parameters<ConvexHttpClient['mutation']>[0],
-      { documents: payload } as Parameters<ConvexHttpClient['mutation']>[1]
-    );
+    // Insert in sub-batches so large PDFs don't exceed Convex per-mutation limits.
+    for (let i = 0; i < payload.length; i += INSERT_BATCH_SIZE) {
+      const slice = payload.slice(i, i + INSERT_BATCH_SIZE);
+      await withRetry(() =>
+        this.client.mutation(
+          api.insertDocument.batchInsertDocuments as Parameters<ConvexHttpClient['mutation']>[0],
+          { documents: slice } as Parameters<ConvexHttpClient['mutation']>[1]
+        )
+      );
+    }
   }
 
   async similaritySearch(
@@ -68,13 +111,15 @@ export class ConvexVectorStore implements IVectorStore {
     const docIdFilter = filter?.docId as { $in?: string[] } | undefined;
     const docIds = docIdFilter?.$in;
     const api = getConvexApi();
-    const results = await this.client.action(
-      api.vectorSearch.vectorSimilaritySearch as Parameters<ConvexHttpClient['action']>[0],
-      {
-        queryEmbedding: queryVector as number[],
-        limit: k,
-        docIds,
-      } as Parameters<ConvexHttpClient['action']>[1]
+    const results = await withRetry(() =>
+      this.client.action(
+        api.vectorSearch.vectorSimilaritySearch as Parameters<ConvexHttpClient['action']>[0],
+        {
+          queryEmbedding: queryVector as number[],
+          limit: k,
+          docIds,
+        } as Parameters<ConvexHttpClient['action']>[1]
+      )
     ) as Array<{ content: string; metadata: Record<string, unknown>; source: string }>;
     return results.map((r) => ({
       pageContent: r.content,
