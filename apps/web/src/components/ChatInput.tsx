@@ -12,7 +12,7 @@ export interface ChatInputProps {
 export function ChatInput({
   onSend,
   disabled = false,
-  placeholder = 'Ask something about your documents...',
+  placeholder = 'What does the document say about…',
 }: ChatInputProps) {
   const [value, setValue] = useState('');
 
@@ -25,17 +25,20 @@ export function ChatInput({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
+    <form
+      onSubmit={handleSubmit}
+      className="flex items-center gap-2 rounded-lg border border-line bg-raised px-2 py-2 transition-colors focus-within:border-gold/60"
+    >
       <input
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className="flex-1 rounded-lg border border-border bg-zinc-900 px-4 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        className="flex-1 bg-transparent px-3 py-1.5 text-[0.95rem] text-ink placeholder:text-ink-dim/70 focus:outline-none disabled:opacity-50"
       />
-      <Button type="submit" disabled={disabled || !value.trim()}>
-        {disabled ? 'Asking…' : 'Ask'}
+      <Button type="submit" size="sm" disabled={disabled || !value.trim()}>
+        {disabled ? 'Asking' : 'Ask'}
       </Button>
     </form>
   );

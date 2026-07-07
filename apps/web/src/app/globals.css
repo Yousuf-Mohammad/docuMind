@@ -3,24 +3,75 @@
 @tailwind utilities;
 
 :root {
-  --background: #0a0a0b;
-  --foreground: #fafafa;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
-  --primary: #3b82f6;
-  --primary-foreground: #fff;
-  --border: #27272a;
-  --ring: #3b82f6;
+  /* Study-at-night: warm ink ground */
+  --bg: #100f0c;
+  --raised: #17150f;
+  --paper: #1c1a14;
+  --ink: #ece6d6;
+  --ink-dim: #98917e;
+  --line: #2a2820;
+  --gold: #e6b34a;
+  --gold-soft: rgba(230, 179, 74, 0.13);
+  --sage: #9db084;
+  --rust: #d3865f;
+  --ring: #e6b34a;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-feature-settings: "rlig" 1, "calt" 1;
+  color: var(--ink);
+  background: var(--bg);
+  font-family: var(--font-serif), Georgia, serif;
+  font-feature-settings: "liga" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Faint paper grain — craft, not decoration */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-line;
+  }
+  ::selection {
+    background: var(--gold-soft);
+    color: var(--ink);
+  }
+}
+
+/* mono eyebrow / label */
+.eyebrow {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+/* Reveal + rise, respecting reduced motion */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise {
+  animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
   }
 }

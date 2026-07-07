@@ -8,15 +8,23 @@ export interface ChatMessageProps {
 
 export function ChatMessage({ role, content, className = '' }: ChatMessageProps) {
   const isUser = role === 'user';
+
+  if (isUser) {
+    return (
+      <p
+        className={`font-mono text-xs leading-relaxed text-ink-dim ${className}`}
+      >
+        <span className="text-gold">?</span> {content}
+      </p>
+    );
+  }
+
+  // Assistant answers are typeset — the "document" voice
   return (
-    <div
-      className={`rounded-lg px-4 py-3 ${
-        isUser
-          ? 'bg-primary/10 text-foreground ml-auto max-w-[85%]'
-          : 'bg-zinc-800/50 text-foreground mr-auto max-w-[85%]'
-      } ${className}`}
+    <p
+      className={`whitespace-pre-wrap font-serif text-[1.15rem] leading-[1.7] text-ink ${className}`}
     >
-      <p className="text-sm whitespace-pre-wrap">{content}</p>
-    </div>
+      {content}
+    </p>
   );
 }
