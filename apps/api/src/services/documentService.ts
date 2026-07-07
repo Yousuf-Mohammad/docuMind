@@ -26,12 +26,6 @@ export async function ingestDocument(buffer: Buffer, filename: string): Promise<
     return await ragIngestDocument(buffer, filename, { embedAndStore });
   } catch (err) {
     const message = (err instanceof Error ? err.message : String(err))?.trim();
-    // TEMP DIAGNOSTIC: log the full raw error so we can see the true cause behind the mapped 502.
-    console.error('[UPLOAD RAW ERROR]', JSON.stringify({
-      name: err instanceof Error ? err.name : typeof err,
-      message,
-      stack: err instanceof Error ? err.stack?.split('\n').slice(0, 4).join(' | ') : undefined,
-    }));
     if (message === 'fetch failed' || message?.includes('fetch failed')) {
       throw new AppError(
         'UPLOAD_FAILED',
