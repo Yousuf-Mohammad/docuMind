@@ -2,6 +2,7 @@
 
 import { DocumentUploader } from '@/components/DocumentUploader';
 import { ChatWindow } from '@/components/ChatWindow';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useUpload } from '@/lib/useUpload';
 import { useAsk } from '@/lib/useAsk';
 
@@ -19,9 +20,12 @@ export default function Home() {
           <span className="font-display text-lg font-medium tracking-tight text-ink">
             Docu<span className="text-gold">Mind</span>
           </span>
-          <span className="eyebrow hidden sm:block">
-            {result ? `${result.chunkCount} passages indexed` : 'Retrieval-augmented reading'}
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="eyebrow hidden sm:block">
+              {result ? `${result.chunkCount} passages indexed` : 'Retrieval-augmented reading'}
+            </span>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

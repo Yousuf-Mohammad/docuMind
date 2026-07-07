@@ -37,7 +37,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          // Set theme before paint to avoid a flash of the wrong palette.
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('documind-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`,
+          }}
+        />
+      </head>
       <body
         className={`${fraunces.variable} ${newsreader.variable} ${mono.variable} min-h-screen antialiased`}
       >

@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root,
+:root[data-theme='dark'] {
   /* Study-at-night: warm ink ground */
   --bg: #100f0c;
   --raised: #17150f;
@@ -15,6 +16,23 @@
   --sage: #9db084;
   --rust: #d3865f;
   --ring: #e6b34a;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  /* Daytime paper: warm sheet under lamplight */
+  --bg: #f4eee0;
+  --raised: #ece5d3;
+  --paper: #fbf7ec;
+  --ink: #2a2620;
+  --ink-dim: #6e6656;
+  --line: #dad1be;
+  --gold: #9c6f16;
+  --gold-soft: rgba(214, 170, 60, 0.32);
+  --sage: #5e7a45;
+  --rust: #b4552b;
+  --ring: #9c6f16;
+  color-scheme: light;
 }
 
 body {
@@ -23,6 +41,7 @@ body {
   font-family: var(--font-serif), Georgia, serif;
   font-feature-settings: "liga" 1, "calt" 1;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Faint paper grain — craft, not decoration */
@@ -34,6 +53,10 @@ body::before {
   pointer-events: none;
   opacity: 0.035;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+:root[data-theme='light'] body::before {
+  opacity: 0.02;
 }
 
 @layer base {
