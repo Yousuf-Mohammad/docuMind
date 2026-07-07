@@ -12,6 +12,16 @@ export interface ConvexVectorStoreConfig {
 /** Transient Convex gateway/network errors worth retrying (not schema/logic errors). */
 function isTransientConvexError(err: unknown): boolean {
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  // Permanent validation/logic errors must never be retried — retrying wastes the whole
+  // backoff budget and then mismaps a deterministic failure into a fake "502".
+  if (
+    msg.includes('is not a supported convex type') ||
+    msg.includes('argumentvalidationerror') ||
+    msg.includes('validator') ||
+    msg.includes('is not a valid')
+  ) {
+    return false;
+  }
   return (
     msg.includes('502') ||
     msg.includes('bad gateway') ||
@@ -59,6 +69,23 @@ async function withRetry<T>(op: () => Promise<T>, attempts = 8, label = 'convex-
 /** Max documents per Convex mutation. Large PDFs are inserted in several smaller transactions. */
 const INSERT_BATCH_SIZE = 64;
 
+/**
+ * Convert an arbitrary value into a plain-JSON structure Convex accepts.
+ *
+ * PDF loaders (pdf.js) attach class instances — notably a `Metadata` object — to
+ * `doc.metadata`. Convex rejects non-plain objects (class instances, Dates, undefined),
+ * which surfaced as an opaque "502" on upload of Word-generated PDFs. A JSON round-trip
+ * flattens class instances to plain objects, converts Dates to strings, and drops
+ * `undefined`/functions, leaving only Convex-safe values.
+ */
+function toPlainJson(value: Record<string, unknown>): Record<string, unknown> {
+  try {
+    return JSON.parse(JSON.stringify(value ?? {})) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 /** Lazy-load Convex generated API (requires `npx convex codegen` from packages/vector-store). */
 function getConvexApi(): {
   insertDocument: { batchInsertDocuments: unknown };
@@ -99,7 +126,9 @@ export class ConvexVectorStore implements IVectorStore {
     const payload = documents.map((doc, i) => ({
       content: doc.pageContent ?? '',
       embedding: vectors[i] as number[],
-      metadata: (doc.metadata ?? {}) as Record<string, unknown>,
+      // Normalize to plain JSON: PDF loaders attach class instances (e.g. pdf.js Metadata)
+      // that Convex rejects. Without this, uploads of PDFs with XMP metadata fail.
+      metadata: toPlainJson((doc.metadata ?? {}) as Record<string, unknown>),
       source: (doc.metadata?.source as string) ?? '',
       docId: doc.metadata?.docId as string | undefined,
     }));
