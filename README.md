@@ -286,6 +286,11 @@ Run from the repository root:
 - **Empty or off-topic answers:** the relevant text may not have been retrieved — try a more
   specific question or increase `topK`.
 
+
+
+to see the whole folder structure and relations -> https://claude.ai/code/artifact/7a22d315-db71-4c32-9cfa-104e7644c736
+
+
 ## License
 
 MIT
